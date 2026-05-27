@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>黄金智讯 · 实时情报看板</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at 10% 20%, #0a0f1e, #03060c);
+            color: #eef2ff;
+            padding: 24px 20px;
+            line-height: 1.4;
+        }
+
+        /* 滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f59e0b;
+            border-radius: 8px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* 头部 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .title h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #FFD966, #F59E0B);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+        }
+        .title p {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-top: 6px;
+        }
+        .badge {
+            background: #1e293b;
+            padding: 6px 14px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* 卡片通用样式 */
+        .card {
+            background: rgba(18, 25, 45, 0.65);
+            backdrop-filter: blur(12px);
+            border-radius: 28px;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            padding: 1.2rem 1.5rem;
+            transition: all 0.2s;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .card:hover {
+            border-color: rgba(245, 158, 11, 0.5);
+            background: rgba(22, 32, 55, 0.8);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-left: 4px solid #f59e0b;
+            padding-left: 12px;
+        }
+        .card-header h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .grid-2col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+        .grid-3col {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        .price-big {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #FFF, #FFD966);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 1px;
+        }
+        .change-positive { color: #2dd4bf; }
+        .change-negative { color: #f87171; }
+        .unit-sub {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-left: 6px;
+        }
+
+        /* 告警面板 */
+        .alert-panel {
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 24px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 28px;
+            border: 1px solid rgba(245, 158, 11, 0.5);
+        }
+        .alert-flex {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            justify-content: space-between;
+        }
+        .alert-item {
+            flex: 1;
+            min-width: 220px;
+            background: #0f172a80;
+            padding: 14px 18px;
+            border-radius: 20px;
+        }
+        .alert-item label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #facc15;
+            display: block;
+            margin-bottom: 8px;
+        }
+        .threshold-input {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .threshold-input input {
+            background: #0a0f1e;
+            border: 1px solid #334155;
+            padding: 8px 12px;
+            border-radius: 16px;
+            color: #f1f5f9;
+            width: 100px;
+            font-weight: 500;
+        }
+        .threshold-input input:focus {
+            outline: none;
+            border-color: #f59e0b;
+        }
+        .switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .switch input {
+            width: 36px;
+            height: 18px;
+            appearance: none;
+            background: #334155;
+            border-radius: 20px;
+            position: relative;
+            cursor: pointer;
+        }
+        .switch input:checked {
+            background: #f59e0b;
+        }
+        .switch input::before {
+            content: "";
+            width: 14px;
+            height: 14px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 3px;
+            transition: 0.2s;
+        }
+        .switch input:checked::before {
+            left: 18px;
+        }
+        .status-badge {
+            font-size: 0.75rem;
+            background: #1e293b;
+            padding: 4px 8px;
+            border-radius: 20px;
+            margin-left: 8px;
+        }
+
+        /* 表格 / 渠道列表 */
+        .channel-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #1e293b;
+        }
+        .news-item {
+            padding: 8px 0;
+            border-bottom: 1px dashed #2d3a5e;
+        }
+        .factor-bar {
+            background: #1e293b;
+            border-radius: 20px;
+            height: 6px;
+            width: 100%;
+            margin-top: 5px;
+        }
+        .factor-fill {
+            background: #f59e0b;
+            border-radius: 20px;
+            height: 6px;
+            width: 0%;
+        }
+
+        button {
+            background: #f59e0b20;
+            border: 1px solid #f59e0b;
+            color: #facc15;
+            padding: 6px 14px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #f59e0b;
+            color: #0a0f1e;
+        }
+        .toast-notify {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: #000000cc;
+            backdrop-filter: blur(16px);
+            border-left: 5px solid #f59e0b;
+            padding: 12px 20px;
+            border-radius: 20px;
+            z-index: 1000;
+            font-weight: 500;
+            box-shadow: 0 8px 20px black;
+            animation: slideIn 0.3s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(60px);}
+            to { opacity: 1; transform: translateX(0);}
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 0.7rem;
+            color: #475569;
+        }
+        @media (max-width: 680px) {
+            body { padding: 16px; }
+            .price-big { font-size: 1.8rem; }
+            .card { padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="title">
+            <h1>⚡ 黄金智讯 · 多维因子看板</h1>
+            <p>实时现货 | 机构积存金 | 宏观情绪 | 短线预警</p>
+        </div>
+        <div class="badge" id="updateTimestamp">--:--:--</div>
+    </div>
+
+    <!-- 价格告警配置面板 -->
+    <div class="alert-panel">
+        <div class="card-header" style="border-left-color: #f97316;">
+            <h3>🔔 价格告警阈值 (手工设定)</h3>
+            <span style="font-size:0.7rem;">超出阈值时实时弹窗提醒</span>
+        </div>
+        <div class="alert-flex">
+            <!-- 主行情人民币/克 -->
+            <div class="alert-item">
+                <label>🏆 主行情 · 人民币/克 (CNY/g)</label>
+                <div class="threshold-input">
+                    <span>下限</span>
+                    <input type="number" step="0.5" id="mainLow" placeholder="--">
+                    <span>上限</span>
+                    <input type="number" step="0.5" id="mainHigh" placeholder="--">
+                </div>
+                <div class="switch">
+                    <input type="checkbox" id="mainAlertEnable"> <span>启用告警</span>
+                    <button id="saveMainBtn" style="margin-left:auto; padding:2px 12px;">保存</button>
+                </div>
+                <div id="mainCurrentStatus" class="status-badge" style="margin-top:8px; display:inline-block;">当前价格: --</div>
+            </div>
+            <!-- 如意金积存 实时主动积存价 -->
+            <div class="alert-item">
+                <label>🏦 如意金积存 · 实时主动积存价 (CNY/g)</label>
+                <div class="threshold-input">
+                    <span>下限</span>
+                    <input type="number" step="0.5" id="ruyiLow" placeholder="--">
+                    <span>上限</span>
+                    <input type="number" step="0.5" id="ruyiHigh" placeholder="--">
+                </div>
+                <div class="switch">
+                    <input type="checkbox" id="ruyiAlertEnable"> <span>启用告警</span>
+                    <button id="saveRuyiBtn" style="margin-left:auto; padding:2px 12px;">保存</button>
+                </div>
+                <div id="ruyiCurrentStatus" class="status-badge" style="margin-top:8px; display:inline-block;">当前价格: --</div>
+            </div>
+        </div>
+        <div style="font-size:12px; color:#94a3b8; margin-top:12px;">💡 提示：阈值保存至本地，价格超出上下限即触发弹窗通知（同一价格区间只告警一次，回落再超再次提醒）</div>
+    </div>
+
+    <!-- 核心行情卡片网格 -->
+    <div class="grid-2col">
+        <!-- 主行情卡片 -->
+        <div class="card">
+            <div class="card-header"><h3>📊 主行情 · 黄金基准</h3><span id="primarySource">GoldPrice.org</span></div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap;">
+                <div><span class="price-big" id="primaryUsd">---</span><span class="unit-sub">USD/oz</span></div>
+                <div><span class="price-big" id="primaryCnyGram">---</span><span class="unit-sub">CNY/g</span></div>
+                <div><span id="primaryChange" style="font-weight:500;">--%</span></div>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 16px; font-size:0.85rem;">
+                <span>📉 15分钟波动: <strong id="shortMovePct">--%</strong></span>
+                <span>⚡ 1小时波动: <strong id="oneHourMove">--%</strong></span>
+            </div>
+            <div id="divergenceNote" style="margin-top: 10px; font-size:0.75rem; color:#b9c3da;"></div>
+        </div>
+
+        <!-- ICBC 如意金积存 卡片 -->
+        <div class="card">
+            <div class="card-header"><h3>🏦 工商银行 · 如意金积存</h3><span>实时主动积存价</span></div>
+            <div><span class="price-big" id="ruyiPrice">---</span><span class="unit-sub">CNY/g</span></div>
+            <div id="ruyiExtra" style="margin-top: 12px; font-size:0.85rem;"></div>
+            <div style="margin-top:8px;"><span id="ruyiTime" style="color:#9ca3af;"></span></div>
+        </div>
+    </div>
+
+    <!-- 渠道行情一览 -->
+    <div class="card" style="margin-bottom:28px;">
+        <div class="card-header"><h3>📡 多市场价格渠道 & 异常监测</h3></div>
+        <div id="channelsList" style="display: grid; grid-template-columns: repeat(auto-fill,minmax(230px,1fr)); gap:8px;"></div>
+    </div>
+
+    <!-- 新闻热度 + 因子 + 预测 -->
+    <div class="grid-3col">
+        <div class="card">
+            <div class="card-header"><h3>📰 新闻情绪 & 分类热力</h3></div>
+            <div id="heatMap" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px;"></div>
+            <div id="newsList" style="max-height: 280px; overflow-y: auto;"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>🧠 影响因子强度</h3></div>
+            <div id="factorsList"></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>🎯 短中期预测 & 逻辑</h3></div>
+            <div id="forecastBox"></div>
+            <div id="reasonBox" style="margin-top: 14px;"></div>
+        </div>
+    </div>
+    <footer>数据每15~20秒自动同步 · 价格超过设定阈值即时弹窗预警</footer>
+</div>
+
+<script>
+    // ---------- 全局变量 ----------
+    let lastMainPrice = null;          // 上一次主行情人民币/克价格 (用于告警去重)
+    let lastRuyiPrice = null;          // 上一次如意金价格
+    let mainAlertTriggered = false;    // 当前是否处于已告警状态（超出区间内）
+    let ruyiAlertTriggered = false;
+
+    // 从localStorage加载阈值配置
+    let alertConfig = {
+        mainLow: null, mainHigh: null, mainEnable: false,
+        ruyiLow: null, ruyiHigh: null, ruyiEnable: false
+    };
+
+    function loadConfig() {
+        try {
+            const saved = localStorage.getItem('goldAlertConfig');
+            if(saved) {
+                const cfg = JSON.parse(saved);
+                alertConfig = { ...alertConfig, ...cfg };
+            }
+        } catch(e) {}
+        document.getElementById('mainLow').value = alertConfig.mainLow !== null ? alertConfig.mainLow : '';
+        document.getElementById('mainHigh').value = alertConfig.mainHigh !== null ? alertConfig.mainHigh : '';
+        document.getElementById('ruyiLow').value = alertConfig.ruyiLow !== null ? alertConfig.ruyiLow : '';
+        document.getElementById('ruyiHigh').value = alertConfig.ruyiHigh !== null ? alertConfig.ruyiHigh : '';
+        document.getElementById('mainAlertEnable').checked = alertConfig.mainEnable;
+        document.getElementById('ruyiAlertEnable').checked = alertConfig.ruyiEnable;
+    }
+
+    function saveMainConfig() {
+        alertConfig.mainLow = parseFloat(document.getElementById('mainLow').value);
+        alertConfig.mainHigh = parseFloat(document.getElementById('mainHigh').value);
+        if(isNaN(alertConfig.mainLow)) alertConfig.mainLow = null;
+        if(isNaN(alertConfig.mainHigh)) alertConfig.mainHigh = null;
+        alertConfig.mainEnable = document.getElementById('mainAlertEnable').checked;
+        localStorage.setItem('goldAlertConfig', JSON.stringify(alertConfig));
+        showToast("✅ 主行情阈值已保存", 1500);
+        // 重置告警标记状态，防止出现旧的触发残留
+        mainAlertTriggered = false;
+        lastMainPrice = null;
+    }
+    function saveRuyiConfig() {
+        alertConfig.ruyiLow = parseFloat(document.getElementById('ruyiLow').value);
+        alertConfig.ruyiHigh = parseFloat(document.getElementById('ruyiHigh').value);
+        if(isNaN(alertConfig.ruyiLow)) alertConfig.ruyiLow = null;
+        if(isNaN(alertConfig.ruyiHigh)) alertConfig.ruyiHigh = null;
+        alertConfig.ruyiEnable = document.getElementById('ruyiAlertEnable').checked;
+        localStorage.setItem('goldAlertConfig', JSON.stringify(alertConfig));
+        showToast("🏦 如意金阈值已保存", 1500);
+        ruyiAlertTriggered = false;
+        lastRuyiPrice = null;
+    }
+
+    // 弹窗通知 (非阻塞样式)
+    function showToast(msg, duration = 4000) {
+        let toast = document.createElement('div');
+        toast.className = 'toast-notify';
+        toast.innerHTML = `⚠️ ${msg}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), duration);
+    }
+
+    // 告警检查核心
+    function checkAlerts(mainPriceCnyGram, ruyiActivePrice) {
+        // 主行情告警
+        if(alertConfig.mainEnable && mainPriceCnyGram !== null && !isNaN(mainPriceCnyGram)) {
+            const low = alertConfig.mainLow;
+            const high = alertConfig.mainHigh;
+            let isAlert = false;
+            let msg = '';
+            if(low !== null && mainPriceCnyGram < low) {
+                isAlert = true;
+                msg = `主行情人民币/克 ${mainPriceCnyGram.toFixed(2)} 低于下限 ${low} CNY/g`;
+            } else if(high !== null && mainPriceCnyGram > high) {
+                isAlert = true;
+                msg = `主行情人民币/克 ${mainPriceCnyGram.toFixed(2)} 高于上限 ${high} CNY/g`;
+            }
+            if(isAlert && !mainAlertTriggered) {
+                showToast(msg, 6000);
+                mainAlertTriggered = true;
+            } else if(!isAlert) {
+                mainAlertTriggered = false;   // 回到安全区间重置标记
+            }
+        } else {
+            mainAlertTriggered = false;
+        }
+
+        // 如意金积存告警
+        if(alertConfig.ruyiEnable && ruyiActivePrice !== null && !isNaN(ruyiActivePrice)) {
+            const low = alertConfig.ruyiLow;
+            const high = alertConfig.ruyiHigh;
+            let isAlert = false;
+            let msg = '';
+            if(low !== null && ruyiActivePrice < low) {
+                isAlert = true;
+                msg = `如意金积存价 ${ruyiActivePrice.toFixed(2)} 低于下限 ${low} CNY/g`;
+            } else if(high !== null && ruyiActivePrice > high) {
+                isAlert = true;
+                msg = `如意金积存价 ${ruyiActivePrice.toFixed(2)} 高于上限 ${high} CNY/g`;
+            }
+            if(isAlert && !ruyiAlertTriggered) {
+                showToast(msg, 6000);
+                ruyiAlertTriggered = true;
+            } else if(!isAlert) {
+                ruyiAlertTriggered = false;
+            }
+        } else {
+            ruyiAlertTriggered = false;
+        }
+    }
+
+    // 渲染整个看板
+    async function refreshDashboard() {
+        try {
+            const resp = await fetch('/api/snapshot');
+            const data = await resp.json();
+            if(!data) return;
+            document.getElementById('updateTimestamp').innerText = new Date(data.asOf).toLocaleTimeString();
+
+            // 1. 主行情数据
+            const primary = data.market?.primary || {};
+            const usdPrice = primary.latest ?? primary.usdPerOunce ?? 0;
+            const cnyGram = primary.cnyPerGram ?? (primary.cnyPerOunce / 31.1034768) ?? 0;
+            const changePct = primary.changePct ?? 0;
+            const shortMove = primary.shortChangePct ?? 0;
+            const oneHourMove = primary.oneHourChangePct ?? 0;
+            document.getElementById('primaryUsd').innerHTML = (usdPrice).toFixed(2);
+            document.getElementById('primaryCnyGram').innerHTML = (cnyGram).toFixed(2);
+            document.getElementById('primaryChange').innerHTML = (changePct>0?`+${changePct}%`: `${changePct}%`);
+            document.getElementById('primaryChange').className = changePct>=0 ? 'change-positive' : 'change-negative';
+            document.getElementById('shortMovePct').innerHTML = (shortMove>0?`+${shortMove}%`: `${shortMove}%`);
+            document.getElementById('oneHourMove').innerHTML = (oneHourMove>0?`+${oneHourMove}%`: `${oneHourMove}%`);
+            document.getElementById('primarySource').innerText = primary.shortName || '基准';
+            if(data.market.divergencePct) document.getElementById('divergenceNote').innerHTML = `⚡ 渠道价差: ${data.market.divergencePct>0?'+':''}${data.market.divergencePct}% (${data.market.divergencePair || 'COMEX/现货'})`;
+
+            // 主行情当前状态显示
+            const mainStatusSpan = document.getElementById('mainCurrentStatus');
+            if(cnyGram) mainStatusSpan.innerHTML = `当前价格: ${cnyGram.toFixed(2)} CNY/g`;
+
+            // 2. 如意金积存
+            let ruyiActive = null;
+            const icbcData = data.icbc;
+            if(icbcData && icbcData.products) {
+                const ruyiProd = icbcData.products.find(p => p.id === 'icbc_ruyi' || p.name.includes('如意金'));
+                if(ruyiProd && ruyiProd.activePrice) {
+                    ruyiActive = ruyiProd.activePrice;
+                    document.getElementById('ruyiPrice').innerHTML = ruyiActive.toFixed(2);
+                    document.getElementById('ruyiTime').innerHTML = `更新: ${ruyiProd.updatedAt ? new Date(ruyiProd.updatedAt).toLocaleString() : '--'}`;
+                    let extraHtml = '';
+                    if(ruyiProd.fields) ruyiProd.fields.forEach(f => { if(f.label !== '实时主动积存价') extraHtml += `<div>${f.label}: ${f.value??'--'} ${f.unit||''}</div>`;});
+                    document.getElementById('ruyiExtra').innerHTML = extraHtml || '赎回价/区间见详情';
+                } else {
+                    document.getElementById('ruyiPrice').innerHTML = '暂不可用';
+                }
+            }
+            const ruyiStatusSpan = document.getElementById('ruyiCurrentStatus');
+            if(ruyiActive) ruyiStatusSpan.innerHTML = `当前价格: ${ruyiActive.toFixed(2)} CNY/g`;
+            else ruyiStatusSpan.innerHTML = `当前价格: 暂无数据`;
+
+            // 3. 渠道列表
+            const channels = data.market?.channels || [];
+            const container = document.getElementById('channelsList');
+            container.innerHTML = channels.map(ch => `
+                <div style="background:#0f172a60; padding:8px 12px; border-radius:20px;">
+                    <div><strong>${ch.shortName || ch.name}</strong> <span style="color:#facc15;">${ch.latest?.toFixed(2)??'--'}</span> ${ch.unit||''}</div>
+                    <div style="font-size:0.7rem;">变动: ${ch.changePct? (ch.changePct>0?`+${ch.changePct}`: `${ch.changePct}`)+'%': '--'}  | 15m: ${ch.shortChangePct? (ch.shortChangePct>0?`+${ch.shortChangePct}`: `${ch.shortChangePct}`)+'%': '--'}</div>
+                </div>
+            `).join('');
+
+            // 4. 新闻热力图
+            const heat = data.news?.heat || [];
+            const heatDiv = document.getElementById('heatMap');
+            heatDiv.innerHTML = heat.map(h => `<span style="background:#f59e0b20; padding:4px 12px; border-radius:40px;">${h.label} ${h.count}条 ${h.direction==='bullish'?'🔥':(h.direction==='bearish'?'❄️':'⚖️')}</span>`).join('');
+            const articles = data.news?.articles || [];
+            const newsDiv = document.getElementById('newsList');
+            newsDiv.innerHTML = articles.slice(0,8).map(a => `<div class="news-item"><div><span style="color:#facc15;">[${a.tone?.label||'中性'}]</span> ${a.title}</div><div style="font-size:0.7rem; color:#7c8eb0;">${a.domain} · ${new Date(a.seenAt).toLocaleString()}</div></div>`).join('');
+
+            // 5. 因子
+            const factors = data.factors || [];
+            const factorDiv = document.getElementById('factorsList');
+            factorDiv.innerHTML = factors.map(f => `<div style="margin-bottom:12px;"><div>${f.name} <span style="float:right;">强度 ${f.intensity}%</span><div class="factor-bar"><div class="factor-fill" style="width:${Math.min(100,f.intensity)}%"></div></div></div><div style="font-size:0.7rem;color:#b9c9e0;">${f.evidence?.join(',')||'无异常'}</div></div>`).join('');
+
+            // 6. 预测
+            const forecast = data.forecast || {};
+            document.getElementById('forecastBox').innerHTML = `<div style="font-size:1.4rem; font-weight:bold;">${forecast.label||'--'} <span style="font-size:0.9rem;">置信 ${forecast.confidence}%</span></div><div>${forecast.summary||''}</div>`;
+            const reasons = data.reasons || [];
+            document.getElementById('reasonBox').innerHTML = `<div style="font-weight:500;">📌 当前解释</div>` + reasons.slice(0,3).map(r => `<div style="font-size:0.8rem; margin-top:6px;">🔹 ${r.title} · ${r.detail}</div>`).join('');
+
+            // 执行告警逻辑
+            checkAlerts(cnyGram, ruyiActive);
+            lastMainPrice = cnyGram;
+            lastRuyiPrice = ruyiActive;
+        } catch(err) {
+            console.error('刷新失败', err);
+        }
+    }
+
+    // 定时刷新 (15秒)
+    let intervalId;
+    function startAutoRefresh() {
+        if(intervalId) clearInterval(intervalId);
+        refreshDashboard();
+        intervalId = setInterval(refreshDashboard, 15000);
+    }
+
+    // 绑定保存事件
+    document.getElementById('saveMainBtn').addEventListener('click', saveMainConfig);
+    document.getElementById('saveRuyiBtn').addEventListener('click', saveRuyiConfig);
+
+    // 初始化
+    loadConfig();
+    startAutoRefresh();
+    window.addEventListener('beforeunload', ()=> { if(intervalId) clearInterval(intervalId); });
+</script>
+</body>
+</html>
